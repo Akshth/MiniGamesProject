@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progressive Memory Match</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .game-container {
+            background-color: #222;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #ffcc00;
+            margin-bottom: 20px;
+        }
+        
+        .level-display {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .level-display span {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .stat {
+            font-size: 1.1rem;
+        }
+        
+        .stat-value {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 5px;
+            margin: 20px auto;
+            max-width: 400px;
+            max-height: 400px;
+        }
+        
+        .card {
+            aspect-ratio: 1;
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #333;
+            position: relative;
+        }
+        
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backface-visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .card-front {
+            background-color: #ffcc00;
+            color: #1a1a1a;
+            transform: rotateY(0deg);
+        }
+        
+        .card-back {
+            background-color: #2a2a2a;
+            color: #ffcc00;
+            transform: rotateY(180deg);
+        }
+        
+        .card.matched .card-front {
+            background-color: rgba(76, 175, 80, 0.3);
+            border-color: #4CAF50;
+        }
+        
+        .card.hidden .card-front {
+            transform: rotateY(180deg);
+        }
+        
+        .card.hidden .card-back {
+            transform: rotateY(0deg);
+        }
+        
+        .card.revealed .card-front {
+            transform: rotateY(0deg);
+        }
+        
+        .card.revealed .card-back {
+            transform: rotateY(180deg);
+        }
+        
+        .controls {
+            margin-top: 20px;
+        }
+        
+        button {
+            background-color: #ffcc00;
+            color: #1a1a1a;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 0 10px;
+        }
+        
+        button:hover {
+            background-color: #e6b800;
+        }
+        
+        .message {
+            margin: 15px 0;
+            font-size: 1.2rem;
+            min-height: 30px;
+            color: #ffcc00;
+        }
+        
+        .high-score {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            background-color: rgba(255, 204, 0, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .high-score-value {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Progressive Memory Match</h1>
+        
+        <div class="level-display">Level: <span id="level">1</span></div>
+        
+        <div class="stats">
+            <div class="stat">Pairs: <span class="stat-value" id="pairs">0</span>/<span id="totalPairs">2</span></div>
+            <div class="stat">Moves: <span class="stat-value" id="moves">0</span></div>
+        </div>
+        
+        <div class="message" id="message">Click Start to begin!</div>
+        
+        <div class="grid" id="gameGrid"></div>
+        
+        <div class="controls">
+            <button id="startBtn">Start Level</button>
+            <button id="resetBtn">Reset Game</button>
+        </div>
+        
+        <div class="high-score">
+            High Score: <span id="highScore" class="high-score-value">0</span>
+        </div>
+    </div>
+
+    <script>
+        const emojis = ['😀', '😂', '😍', '🤩', '😎', '🥳', '🤪', '🧐', '🥶', '🤯', 
+                       '👻', '🦄', '🐶', '🐱', '🦁', '🐮', '🐷', '🐸', '🐵', '🦊',
+                       '🍎', '🍕', '🍦', '🍩', '🍭', '🏀', '⚽', '🎮', '🎸', '🎲'];
+        const gameGrid = document.getElementById('gameGrid');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const levelDisplay = document.getElementById('level');
+        const pairsDisplay = document.getElementById('pairs');
+        const totalPairsDisplay = document.getElementById('totalPairs');
+        const movesDisplay = document.getElementById('moves');
+        const messageDisplay = document.getElementById('message');
+        const highScoreDisplay = document.getElementById('highScore');
+        
+        // Game state
+        let level = 1;
+        let totalPairs = 2;
+        let matchedPairs = 0;
+        let moves = 0;
+        let cards = [];
+        let canClick = false;
+        let highScore = localStorage.getItem('memoryHighScore') || 0;
+        let activeEmojis = [];
+        
+        // Initialize high score display
+        highScoreDisplay.textContent = highScore;
+        
+        function initGame() {
+            gameGrid.innerHTML = '';
+            cards = [];
+            matchedPairs = 0;
+            moves = 0;
+            pairsDisplay.textContent = '0';
+            movesDisplay.textContent = '0';
+            totalPairsDisplay.textContent = totalPairs;
+            messageDisplay.textContent = `Level ${level}: Find ${totalPairs} matching pairs`;
+            
+            // Create empty grid (6x6 = 36 cards)
+            for (let i = 0; i < 36; i++) {
+                const card = document.createElement('div');
+                card.classList.add('card', 'hidden');
+                card.dataset.index = i;
+                
+                // Front face (emoji)
+                const front = document.createElement('div');
+                front.classList.add('card-front');
+                
+                // Back face (question mark)
+                const back = document.createElement('div');
+                back.classList.add('card-back');
+                back.textContent = '?';
+                
+                card.appendChild(front);
+                card.appendChild(back);
+                card.addEventListener('click', () => flipCard(card));
+                gameGrid.appendChild(card);
+                cards.push(card);
+            }
+        }
+        
+        function startLevel() {
+            // Clear any existing emojis
+            cards.forEach(card => {
+                const front = card.querySelector('.card-front');
+                front.textContent = '';
+                card.dataset.emoji = '';
+                card.classList.remove('matched', 'revealed');
+                card.classList.add('hidden');
+            });
+            
+            // Select emojis for this level
+            activeEmojis = [];
+            const pairsNeeded = Math.min(totalPairs, emojis.length);
+            const selectedEmojis = emojis.slice(0, pairsNeeded);
+            
+            // Add two of each emoji to active list
+            selectedEmojis.forEach(emoji => {
+                activeEmojis.push(emoji, emoji);
+            });
+            
+            // Randomly place active emojis in grid
+            const emptyCards = cards.filter(card => !card.classList.contains('matched'));
+            const availableSpots = [...Array(emptyCards.length).keys()].sort(() => Math.random() - 0.5);
+            
+            activeEmojis.forEach((emoji, i) => {
+                if (i < availableSpots.length) {
+                    const card = emptyCards[availableSpots[i]];
+                    const front = card.querySelector('.card-front');
+                    front.textContent = emoji;
+                    card.dataset.emoji = emoji;
+                    card.classList.add('revealed');
+                }
+            });
+            
+            messageDisplay.textContent = "Memorize these emojis...";
+            canClick = false;
+            
+            // Hide them after 3 seconds
+            setTimeout(() => {
+                cards.forEach(card => {
+                    if (card.dataset.emoji) {
+                        card.classList.remove('revealed');
+                        card.classList.add('hidden');
+                    }
+                });
+                messageDisplay.textContent = "Now find the matching pairs!";
+                canClick = true;
+            }, 3000);
+        }
+        
+        function flipCard(card) {
+            if (!canClick || card.classList.contains('matched') || !card.dataset.emoji) return;
+            
+            card.classList.remove('hidden');
+            moves++;
+            movesDisplay.textContent = moves;
+            
+            // Check for matches
+            const flippedCards = cards.filter(c => 
+                !c.classList.contains('hidden') && 
+                !c.classList.contains('matched') && 
+                c.dataset.emoji
+            );
+            
+            if (flippedCards.length === 2) {
+                canClick = false;
+                
+                if (flippedCards[0].dataset.emoji === flippedCards[1].dataset.emoji) {
+                    // Match found
+                    flippedCards.forEach(c => c.classList.add('matched'));
+                    matchedPairs++;
+                    pairsDisplay.textContent = matchedPairs;
+                    
+                    if (matchedPairs === totalPairs) {
+                        // Level complete
+                        messageDisplay.textContent = `Level ${level} complete!`;
+                        setTimeout(() => {
+                            level++;
+                            totalPairs = Math.min(level + 1, emojis.length);
+                            levelDisplay.textContent = level;
+                            initGame();
+                            updateHighScore();
+                        }, 1500);
+                    } else {
+                        canClick = true;
+                    }
+                } else {
+                    // No match
+                    setTimeout(() => {
+                        flippedCards.forEach(c => c.classList.add('hidden'));
+                        canClick = true;
+                    }, 1000);
+                }
+            }
+        }
+        
+        function updateHighScore() {
+            if (level - 1 > highScore) {
+                highScore = level - 1;
+                localStorage.setItem('memoryHighScore', highScore);
+                highScoreDisplay.textContent = highScore;
+            }
+        }
+        
+        function resetGame() {
+            level = 1;
+            totalPairs = 2;
+            initGame();
+        }
+        
+        startBtn.addEventListener('click', startLevel);
+        resetBtn.addEventListener('click', resetGame);
+        
+        // Initialize game
+        initGame();
+    </script>
+</body>
+</html>

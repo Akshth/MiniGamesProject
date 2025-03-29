@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Memory Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-image: radial-gradient(circle at 10% 20%, #2b2b2b 0%, #1a1a1a 90%);
+        }
+        
+        .game-container {
+            background-color: #222;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid #333;
+        }
+        
+        h1 {
+            color: #ffcc00;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 4px rgba(255, 204, 0, 0.3);
+        }
+        
+        .description {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: #ccc;
+        }
+        
+        #level {
+            font-size: 1.8rem;
+            color: #ffcc00;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        #numberDisplay {
+            font-size: 5rem;
+            font-weight: bold;
+            margin: 40px 0;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
+            border: 1px solid #333;
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(255, 255, 255, 0.2);
+        }
+        
+        .input-container {
+            margin-top: 30px;
+        }
+        
+        .input-box {
+            padding: 15px;
+            font-size: 1.8rem;
+            border: 2px solid #ffcc00;
+            border-radius: 10px;
+            background-color: #2a2a2a;
+            color: white;
+            outline: none;
+            text-align: center;
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn {
+            padding: 16px 35px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            margin: 10px;
+            background-color: #ffcc00;
+            color: #1a1a1a;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(255, 204, 0, 0.3);
+        }
+        
+        .btn:hover {
+            background-color: #e6b800;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 204, 0, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .high-score {
+            margin-top: 30px;
+            font-size: 1.3rem;
+            background-color: rgba(255, 204, 0, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 204, 0, 0.3);
+        }
+        
+        .high-score-value {
+            font-weight: bold;
+            color: #ffcc00;
+            font-size: 1.5rem;
+        }
+        
+        @media (max-width: 600px) {
+            #numberDisplay {
+                font-size: 3rem;
+                min-height: 100px;
+            }
+            
+            .input-box {
+                font-size: 1.5rem;
+            }
+            
+            .btn {
+                font-size: 1rem;
+                padding: 12px 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Number Memory Game</h1>
+        <p class="description">Remember the number and type it after it disappears!</p>
+        
+        <button class="btn" id="startButton">Start Game</button>
+        
+        <div id="gameContainer" style="display: none;">
+            <div id="level">Level: 1</div>
+            <div id="numberDisplay"></div>
+            
+            <div class="input-container">
+                <input type="text" class="input-box" id="userInput" disabled 
+                       onkeydown="if(event.key==='Enter'){checkAnswer();}">
+                <button class="btn" id="submitButton">Submit</button>
+            </div>
+        </div>
+        
+        <div class="high-score">
+            High Score: <span id="highScore" class="high-score-value">Level 0</span>
+        </div>
+    </div>
+    
+    <script>
+        // Debug mode - set to false in production
+        const DEBUG = true;
+        
+        let level = 1;
+        let numberToRemember = "";
+        const displayTime = 2000;
+        let highScore = localStorage.getItem('numberMemoryHighScore') || 0;
+        
+        // Initialize game
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (DEBUG) console.log("Game initialized");
+            
+            // Load server high score if logged in
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    if (DEBUG) console.log("Fetching high score from server...");
+                    
+                    const response = await fetch('http://localhost:3004/api/highscores', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (DEBUG) console.log("Server response:", data);
+                        
+                        // Update high score from server if available
+                        if (data?.numbermem !== undefined) {
+                            highScore = data.numbermem;
+                            localStorage.setItem('numberMemoryHighScore', highScore);
+                            if (DEBUG) console.log("Updated high score from server:", highScore);
+                        }
+                    } else {
+                        const error = await response.text();
+                        console.error("Server error:", response.status, error);
+                    }
+                } catch (error) {
+                    console.error("Network error:", error);
+                }
+            }
+            
+            // Initialize display
+            document.getElementById('highScore').textContent = `Level ${highScore}`;
+        });
+        
+        document.getElementById("startButton").addEventListener('click', startGame);
+        document.getElementById("submitButton").addEventListener('click', checkAnswer);
+        
+        function startGame() {
+            document.getElementById("startButton").style.display = "none";
+            document.getElementById("gameContainer").style.display = "block";
+            generateNumber();
+        }
+        
+        function generateNumber() {
+            let numLength = level < 12 ? level + 1 : level + 2;
+            numberToRemember = "";
+            for (let i = 0; i < numLength; i++) {
+                numberToRemember += Math.floor(Math.random() * 10);
+            }
+            document.getElementById("numberDisplay").textContent = numberToRemember;
+            document.getElementById("userInput").value = "";
+            document.getElementById("userInput").disabled = true;
+            
+            setTimeout(() => {
+                document.getElementById("numberDisplay").textContent = "";
+                document.getElementById("userInput").disabled = false;
+                document.getElementById("userInput").focus();
+            }, displayTime);
+        }
+        
+        function checkAnswer() {
+            let userAnswer = document.getElementById("userInput").value;
+            if (userAnswer === numberToRemember) {
+                level++;
+                document.getElementById("level").textContent = `Level: ${level}`;
+                updateHighScore();
+                generateNumber();
+            } else {
+                alert(`Game Over! You reached Level ${level}`);
+                resetGame();
+            }
+        }
+        
+        async function updateHighScore() {
+    if (level > highScore) {
+        highScore = level;
+        localStorage.setItem('numberMemoryHighScore', highScore);
+        document.getElementById('highScore').textContent = `Level ${highScore}`;
+        
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                console.log("Attempting to save high score...");
+                
+                const response = await fetch('http://localhost:3004/api/update-highscore', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        game: 'numbermem',
+                        score: highScore
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.text();
+                    console.error("Server returned:", response.status, error);
+                    alert(`Server error: ${response.status} - ${error}`);
+                    return;
+                }
+                
+                const result = await response.json();
+                console.log("Save successful:", result);
+                
+            } catch (error) {
+                console.error("Network error:", error);
+                alert("Network error - high score saved locally only");
+            }
+        }
+    }
+}
+        function resetGame() {
+            level = 1;
+            document.getElementById("level").textContent = `Level: ${level}`;
+            document.getElementById("userInput").value = "";
+            document.getElementById("userInput").disabled = true;
+            document.getElementById("gameContainer").style.display = "none";
+            document.getElementById("startButton").style.display = "inline-block";
+        }
+        
+        // Animation for high score update
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes highlight {
+                0% { transform: scale(1); color: #ffcc00; }
+                50% { transform: scale(1.2); color: #ffeb3b; }
+                100% { transform: scale(1); color: #ffcc00; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

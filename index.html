@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Hub</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            text-align: center;
+            background: #222;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0px 8px 16px rgba(255, 223, 0, 0.2);
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .auth-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .auth-button {
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .login-button {
+            background-color: transparent;
+            border: 2px solid #ffd700;
+            color: #ffd700;
+        }
+
+        .login-button:hover {
+            background-color: rgba(255, 215, 0, 0.1);
+        }
+
+        .signup-button {
+            background-color: #ffd700;
+            border: 2px solid #ffd700;
+            color: #1a1a1a;
+        }
+
+        .signup-button:hover {
+            background-color: #ffc800;
+            border-color: #ffc800;
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .title span {
+            color: #ffd700;
+        }
+
+        .section-title {
+            font-size: 24px;
+            margin: 30px 0 15px;
+            color: #ffd700;
+            text-align: left;
+            padding-left: 10px;
+            border-left: 4px solid #ffd700;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .game-box {
+            aspect-ratio: 1/1;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            border: 2px solid #333;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .game-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(255, 215, 0, 0.3);
+        }
+
+        .single-player:hover {
+            background-color: #4CAF50;
+            border-color: #4CAF50;
+        }
+
+        .multiplayer:hover {
+            background-color: #2196F3;
+            border-color: #2196F3;
+        }
+
+        .game-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .game-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .player-count {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 12px;
+            background: rgba(0,0,0,0.5);
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .single-player .player-count {
+            background-color: #4CAF50;
+        }
+
+        .multiplayer .player-count {
+            background-color: #2196F3;
+        }
+
+        @media (max-width: 600px) {
+            .games-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="auth-buttons" id="authButtons">
+            <!-- Only one set of auth buttons here -->
+            <a href="login.html" class="auth-button login-button" id="loginButton">Login</a>
+            <a href="signup.html" class="auth-button signup-button" id="signupButton">Sign Up</a>
+            <a href="#" class="auth-button login-button" id="logoutButton" style="display: none;">Logout</a>
+            <a href="dashboard.html" class="auth-button login-button" id="dashboardButton" style="display: none;">Dashboard</a>
+        </div>
+
+        <div class="title">Mini Games🎮</div>
+
+        <div class="games-grid">
+            <a href="haveyouseen.html" class="game-box single-player">
+                <div class="player-count">1P</div>
+                <div class="game-icon">👀</div>
+                <div class="game-title">Have You Seen?</div>
+            </a>
+            <a href="memmatch.html" class="game-box single-player">
+                <div class="player-count">1P</div>
+                <div class="game-icon">🧠</div>
+                <div class="game-title">Memory Match</div>
+            </a>
+            <a href="numbermem.html" class="game-box single-player">
+                <div class="player-count">1P</div>
+                <div class="game-icon">🔢</div>
+                <div class="game-title">Number Memory</div>
+            </a>
+            <a href="reaction.html" class="game-box single-player">
+                <div class="player-count">1P</div>
+                <div class="game-icon">⚡</div>
+                <div class="game-title">Reaction Test</div>
+            </a>
+            <a href="sequence.html" class="game-box single-player">
+                <div class="player-count">1P</div>
+                <div class="game-icon">🔠</div>
+                <div class="game-title">Sequence Memory</div>
+            </a>
+            <a href="tictactoe.html" class="game-box single-player">
+                <div class="player-count">2P</div>
+                <div class="game-icon">❌⭕</div>
+                <div class="game-title">Tic Tac Toe</div>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            const loginButton = document.getElementById('loginButton');
+            const signupButton = document.getElementById('signupButton');
+            const logoutButton = document.getElementById('logoutButton');
+            const dashboardButton = document.getElementById('dashboardButton');
+
+            // Check authentication status on page load
+            updateAuthButtons(token);
+            
+            // Set up logout functionality
+            if (logoutButton) {
+                logoutButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    localStorage.removeItem('token');
+                    updateAuthButtons(null);
+                    window.location.href = 'index.html';
+                });
+            }
+
+            function updateAuthButtons(token) {
+                if (token) {
+                    // User is logged in
+                    if (loginButton) loginButton.style.display = 'none';
+                    if (signupButton) signupButton.style.display = 'none';
+                    if (logoutButton) logoutButton.style.display = 'inline-block';
+                    if (dashboardButton) dashboardButton.style.display = 'inline-block';
+                } else {
+                    // User is not logged in
+                    if (loginButton) loginButton.style.display = 'inline-block';
+                    if (signupButton) signupButton.style.display = 'inline-block';
+                    if (logoutButton) logoutButton.style.display = 'none';
+                    if (dashboardButton) dashboardButton.style.display = 'none';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

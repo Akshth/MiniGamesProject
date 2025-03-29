@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #222;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            color: #ffcc00;
+            text-align: center;
+        }
+        .user-info {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .scores-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .game-score {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ffcc00;
+        }
+        .game-score h3 {
+            margin-top: 0;
+            color: #ffcc00;
+        }
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .logout-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #ff3333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 30px;
+        }
+        .logout-btn:hover {
+            background-color: #e60000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your Dashboard</h1>
+        <div class="user-info">
+            <h2 id="username-display">Loading...</h2>
+        </div>
+        <h2>Your High Scores</h2>
+        <div class="scores-container" id="scores-container">
+            <!-- Scores will be populated by JavaScript -->
+        </div>
+        <button class="logout-btn" id="logoutBtn">Logout</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                alert('Please login to view dashboard');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                // Fetch user data
+                const response = await fetch('http://localhost:3004/api/highscores', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+
+                const highScores = await response.json();
+                const userData = JSON.parse(atob(token.split('.')[1]));
+
+                // Display user info
+                document.getElementById('username-display').textContent = `Welcome, ${userData.username}`;
+
+                // Display scores
+                const scoresContainer = document.getElementById('scores-container');
+                
+                const games = [
+                    { name: 'Have You Seen', key: 'haveyouseen' },
+                    { name: 'Memory Match', key: 'memmatch' },
+                    { name: 'Number Memory', key: 'numbermem' },
+                    { name: 'Reaction Test', key: 'reaction' },
+                    { name: 'Sequence Memory', key: 'sequence' },
+                    { name: 'Tic Tac Toe', key: 'tictactoe' }
+                ];
+
+                games.forEach(game => {
+                    const scoreDiv = document.createElement('div');
+                    scoreDiv.className = 'game-score';
+                    
+                    const scoreValue = highScores[game.key] !== undefined ? 
+                        (game.key === 'reaction' ? `${highScores[game.key]} ms` : highScores[game.key]) : 
+                        'No score yet';
+                    
+                    scoreDiv.innerHTML = `
+                        <h3>${game.name}</h3>
+                        <div class="score-value">${scoreValue}</div>
+                    `;
+                    
+                    scoresContainer.appendChild(scoreDiv);
+                });
+
+                // Logout button
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    localStorage.removeItem('token');
+                    window.location.href = 'index.html';
+                });
+
+            } catch (error) {
+                console.error('Dashboard error:', error);
+                alert('Error loading dashboard: ' + error.message);
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+            }
+        });
+    </script>
+</body>
+</html>

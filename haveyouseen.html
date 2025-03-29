@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Have You Seen This Word?</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #1a1a1a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background-image: radial-gradient(circle at 10% 20%, #2b2b2b 0%, #1a1a1a 90%);
+        }
+        
+        .game-container {
+            background-color: #222;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid #333;
+        }
+        
+        h1 {
+            color: #ffcc00;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(255, 204, 0, 0.3);
+        }
+        
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat {
+            font-size: 1.5rem;
+            padding: 0 15px;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #ffcc00;
+        }
+        
+        #wordDisplay {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 40px 0;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.4);
+            border: 1px solid #333;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #fff;
+            text-shadow: 0 2px 5px rgba(255, 255, 255, 0.2);
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 16px 35px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            background-color: #ffcc00;
+            color: #1a1a1a;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(255, 204, 0, 0.3);
+            min-width: 150px;
+        }
+        
+        .btn:hover {
+            background-color: #e6b800;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 204, 0, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .high-score {
+            margin-top: 30px;
+            font-size: 1.3rem;
+            background-color: rgba(255, 204, 0, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 204, 0, 0.3);
+        }
+        
+        .high-score-value {
+            font-weight: bold;
+            color: #ffcc00;
+            font-size: 1.5rem;
+        }
+        
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            #wordDisplay {
+                font-size: 3rem;
+                min-height: 100px;
+            }
+            
+            .stat {
+                font-size: 1.2rem;
+            }
+            
+            .buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Have You Seen This Word?</h1>
+        
+        <div class="stats-container">
+            <div class="stat">
+                Lives: <span id="lives" class="stat-value">3</span>
+            </div>
+            <div class="stat">
+                Score: <span id="score" class="stat-value">0</span>
+            </div>
+        </div>
+        
+        <div id="wordDisplay">Loading...</div>
+        
+        <div class="buttons">
+            <button class="btn" onclick="checkWord(true)">SEEN</button>
+            <button class="btn" onclick="checkWord(false)">NEW</button>
+        </div>
+        
+        <div class="high-score">
+            High Score: <span id="highScore" class="high-score-value">0</span>
+        </div>
+    </div>
+
+    <script>
+        let lives = 3;
+        let score = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
+        let wordsSeen = new Set();
+        let currentWord = "";
+
+        const words = [
+            "apple", "banana", "cherry", "echo", "falcon", "guitar", "horizon",
+            "igloo", "jungle", "kiwi", "lamp", "mirror", "nectar", "ocean",
+            "parrot", "quantum", "rainbow", "sunshine", "tiger", "umbrella",
+            "volcano", "whale", "xylophone", "yacht", "zeppelin", "mountain",
+            "keyboard", "sunset", "whisper", "puzzle", "velvet", "thunder",
+            "sesquipedalian", "obfuscate", "perspicacious"
+        ];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load high score from server if logged in
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const response = await fetch('http://localhost:3004/api/highscores', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        highScore = data.haveyouseen || highScore;
+                        document.getElementById('highScore').textContent = highScore;
+                    } else {
+                        console.error('Failed to fetch high scores:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Error fetching high scores:', error);
+                }
+            } else {
+                document.getElementById('highScore').textContent = highScore;
+            }
+            
+            newRound();
+        });
+
+        function getRandomWord() {
+            return words[Math.floor(Math.random() * words.length)];
+        }
+
+        function newRound() {
+            currentWord = getRandomWord();
+            document.getElementById("wordDisplay").textContent = currentWord;
+        }
+
+        async function checkWord(seenBefore) {
+            const hasSeen = wordsSeen.has(currentWord);
+
+            if (seenBefore === hasSeen) {
+                score++;
+                document.getElementById("wordDisplay").style.color = "#4CAF50";
+                setTimeout(() => {
+                    document.getElementById("wordDisplay").style.color = "white";
+                }, 300);
+            } else {
+                lives--;
+                document.getElementById("wordDisplay").style.color = "#F44336";
+                setTimeout(() => {
+                    document.getElementById("wordDisplay").style.color = "white";
+                }, 300);
+            }
+
+            wordsSeen.add(currentWord);
+            document.getElementById("lives").textContent = lives;
+            document.getElementById("score").textContent = score;
+
+            if (lives > 0) {
+                setTimeout(newRound, 500);
+            } else {
+                await updateHighScore();
+                setTimeout(() => {
+                    alert(`Game Over!\nFinal Score: ${score}\nHigh Score: ${highScore}`);
+                    resetGame();
+                }, 300);
+            }
+        }
+
+        async function updateHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+                document.getElementById('highScore').textContent = highScore;
+                document.getElementById('highScore').style.animation = "highlight 1s";
+                
+                const token = localStorage.getItem('token');
+                if (token) {
+                    try {
+                        const response = await fetch('http://localhost:3004/api/update-highscore', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                game: 'haveyouseen',
+                                score: highScore
+                            })
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('Failed to save high score:', errorText);
+                            alert('Failed to save high score to server. Please try again.');
+                        }
+                    } catch (error) {
+                        console.error('Error saving high score:', error);
+                        alert('Error saving high score to server. Please check your connection.');
+                    }
+                }
+            }
+        }
+
+        function resetGame() {
+            lives = 3;
+            score = 0;
+            wordsSeen.clear();
+            document.getElementById("lives").textContent = lives;
+            document.getElementById("score").textContent = score;
+            newRound();
+        }
+
+        // Animation for high score update
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes highlight {
+                0% { transform: scale(1); color: #ffcc00; }
+                50% { transform: scale(1.2); color: #ffeb3b; }
+                100% { transform: scale(1); color: #ffcc00; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
