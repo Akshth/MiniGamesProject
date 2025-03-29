@@ -23,15 +23,18 @@ app.use(express.static(__dirname));
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+      serverSelectionTimeoutMS: 10000, // 10 second timeout
+      socketTimeoutMS: 45000, // 45 second socket timeout
       ssl: true,
-      tlsAllowInvalidCertificates: false
+      tlsAllowInvalidCertificates: false,
+      retryWrites: true,
+      w: 'majority'
     });
     console.log('✅ MongoDB connected successfully');
   } catch (err) {
     console.error('❌ MongoDB connection error:', err);
-    process.exit(1); // Exit process with failure
+    // Implement retry logic or exit process
+    process.exit(1);
   }
 };
 
