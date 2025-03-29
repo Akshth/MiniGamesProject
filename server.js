@@ -10,7 +10,10 @@ const app = express();
 
 // Enhanced CORS configuration
 app.use(cors({
-  origin: 'https://free-mini-games.vercel.app',
+  origin: [
+    'https://free-mini-games.vercel.app',
+    'https://mini-games-project-fzubep6k7-akshaths-projects-29f5a46f.vercel.app'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
