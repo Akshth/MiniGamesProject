@@ -50,7 +50,8 @@ const userSchema = new mongoose.Schema({
     reaction: { type: Number, default: Infinity }, // Lower is better
     sequence: { type: Number, default: 0 },
     tictactoe: { type: Number, default: 0 }
-  }
+  },
+  lastUpdated: { type: Date, default: Date.now }
 }, { strict: true }); // Strict mode prevents undefined fields
 
 const User = mongoose.model('User', userSchema);
@@ -147,11 +148,14 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/highscores', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('highScores');
+    const user = await User.findById(req.user.userId).select('highScores lastUpdated');
     if (!user) {
       return res.status(404).send('User not found.');
     }
-    res.json(user.highScores);
+    res.json({
+      ...user.highScores.toObject(),
+      lastUpdated: user.lastUpdated
+    });
   } catch (error) {
     console.error('Highscores fetch error:', error);
     res.status(500).send('Error fetching high scores.');
@@ -178,20 +182,33 @@ app.post('/api/update-highscore', authenticateToken, async (req, res) => {
     }
 
     // Update logic
+    let updated = false;
     if (game === 'reaction') {
       if (score < user.highScores.reaction) {
         user.highScores.reaction = score;
+        updated = true;
       }
     } else if (score > user.highScores[game]) {
       user.highScores[game] = score;
+      updated = true;
     }
 
-    await user.save();
-    res.json({ 
-      success: true,
-      message: 'High score updated successfully',
-      highScores: user.highScores
-    });
+    if (updated) {
+      user.lastUpdated = new Date();
+      await user.save();
+      res.json({ 
+        success: true,
+        message: 'High score updated successfully',
+        highScores: user.highScores,
+        lastUpdated: user.lastUpdated
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'Score not higher than current high score',
+        highScores: user.highScores
+      });
+    }
   } catch (error) {
     console.error('Highscore update error:', error);
     res.status(500).send('Error updating high score.');
@@ -242,3 +259,5 @@ process.on('SIGINT', async () => {
     process.exit(1);
   }
 });
+
+6

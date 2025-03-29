@@ -41,6 +41,7 @@
             padding: 15px;
             border-radius: 10px;
             border-left: 4px solid #ffcc00;
+            position: relative;
         }
         .game-score h3 {
             margin-top: 0;
@@ -49,6 +50,7 @@
         .score-value {
             font-size: 1.5rem;
             font-weight: bold;
+            margin: 10px 0;
         }
         .logout-btn {
             display: block;
@@ -65,6 +67,36 @@
         .logout-btn:hover {
             background-color: #e60000;
         }
+        .refresh-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #333;
+            color: #ffcc00;
+            border: 1px solid #ffcc00;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        .refresh-btn:hover {
+            background-color: #ffcc00;
+            color: #1a1a1a;
+        }
+        .last-updated {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        @keyframes highlight {
+            0% { transform: scale(1); color: #ffcc00; }
+            50% { transform: scale(1.05); color: #ffeb3b; }
+            100% { transform: scale(1); color: #ffcc00; }
+        }
+        .highlight {
+            animation: highlight 1s;
+        }
     </style>
 </head>
 <body>
@@ -77,6 +109,7 @@
         <div class="scores-container" id="scores-container">
             <!-- Scores will be populated by JavaScript -->
         </div>
+        <button class="refresh-btn" id="refreshBtn">Refresh Scores</button>
         <button class="logout-btn" id="logoutBtn">Logout</button>
     </div>
 
@@ -89,65 +122,74 @@
                 window.location.href = 'login.html';
                 return;
             }
-
-            try {
-                // Fetch user data
-                const response = await fetch('http://localhost:3004/api/highscores', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+    
+            const loadScores = async () => {
+                try {
+                    // Fetch user data
+                    const response = await fetch('http://localhost:3004/api/highscores', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+    
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch user data');
                     }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch user data');
-                }
-
-                const highScores = await response.json();
-                const userData = JSON.parse(atob(token.split('.')[1]));
-
-                // Display user info
-                document.getElementById('username-display').textContent = `Welcome, ${userData.username}`;
-
-                // Display scores
-                const scoresContainer = document.getElementById('scores-container');
-                
-                const games = [
-                    { name: 'Have You Seen', key: 'haveyouseen' },
-                    { name: 'Memory Match', key: 'memmatch' },
-                    { name: 'Number Memory', key: 'numbermem' },
-                    { name: 'Reaction Test', key: 'reaction' },
-                    { name: 'Sequence Memory', key: 'sequence' },
-                    { name: 'Tic Tac Toe', key: 'tictactoe' }
-                ];
-
-                games.forEach(game => {
-                    const scoreDiv = document.createElement('div');
-                    scoreDiv.className = 'game-score';
+    
+                    const highScores = await response.json();
+                    const userData = JSON.parse(atob(token.split('.')[1]));
+    
+                    // Display user info
+                    document.getElementById('username-display').textContent = `Welcome, ${userData.username}`;
+    
+                    // Display scores
+                    const scoresContainer = document.getElementById('scores-container');
+                    scoresContainer.innerHTML = '';
                     
-                    const scoreValue = highScores[game.key] !== undefined ? 
-                        (game.key === 'reaction' ? `${highScores[game.key]} ms` : highScores[game.key]) : 
-                        'No score yet';
-                    
-                    scoreDiv.innerHTML = `
-                        <h3>${game.name}</h3>
-                        <div class="score-value">${scoreValue}</div>
-                    `;
-                    
-                    scoresContainer.appendChild(scoreDiv);
-                });
-
-                // Logout button
-                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    const games = [
+                        { name: 'Have You Seen', key: 'haveyouseen', format: (val) => val || 'No score yet' },
+                        { name: 'Memory Match', key: 'memmatch', format: (val) => val ? `Level ${val}` : 'No score yet' },
+                        { name: 'Number Memory', key: 'numbermem', format: (val) => val ? `Level ${val}` : 'No score yet' },
+                        { name: 'Reaction Test', key: 'reaction', format: (val) => val === Infinity ? 'No score yet' : `${val} ms` },
+                        { name: 'Sequence Memory', key: 'sequence', format: (val) => val ? `Level ${val}` : 'No score yet' }
+                    ];
+    
+                    games.forEach(game => {
+                        const scoreDiv = document.createElement('div');
+                        scoreDiv.className = 'game-score';
+                        
+                        const scoreValue = game.format(highScores[game.key]);
+                        
+                        scoreDiv.innerHTML = `
+                            <h3>${game.name}</h3>
+                            <div class="score-value">${scoreValue}</div>
+                            <div class="last-updated">Last updated: ${new Date(highScores.lastUpdated || Date.now()).toLocaleString()}</div>
+                        `;
+                        
+                        scoresContainer.appendChild(scoreDiv);
+                    });
+    
+                } catch (error) {
+                    console.error('Dashboard error:', error);
+                    alert('Error loading dashboard: ' + error.message);
                     localStorage.removeItem('token');
-                    window.location.href = 'index.html';
-                });
-
-            } catch (error) {
-                console.error('Dashboard error:', error);
-                alert('Error loading dashboard: ' + error.message);
+                    window.location.href = 'login.html';
+                }
+            };
+    
+            // Initial load
+            await loadScores();
+    
+            // Refresh button
+            document.getElementById('refreshBtn').addEventListener('click', async () => {
+                await loadScores();
+            });
+    
+            // Logout button
+            document.getElementById('logoutBtn').addEventListener('click', () => {
                 localStorage.removeItem('token');
-                window.location.href = 'login.html';
-            }
+                window.location.href = 'index.html';
+            });
         });
     </script>
 </body>

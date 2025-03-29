@@ -167,6 +167,32 @@
             color: #ffcc00;
             font-weight: bold;
         }
+
+        @keyframes highlight {
+            0% { transform: scale(1); color: #ffcc00; }
+            50% { transform: scale(1.1); color: #ffeb3b; }
+            100% { transform: scale(1); color: #ffcc00; }
+        }
+
+        .highlight {
+            animation: highlight 1s;
+        }
+
+        .match-feedback {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0;
+            transition: all 0.5s;
+            pointer-events: none;
+        }
+
+        .positive-feedback {
+            color: #4CAF50;
+        }
+
+        .negative-feedback {
+            color: #F44336;
+        }
     </style>
 </head>
 <body>
@@ -178,6 +204,7 @@
         <div class="stats">
             <div class="stat">Pairs: <span class="stat-value" id="pairs">0</span>/<span id="totalPairs">2</span></div>
             <div class="stat">Moves: <span class="stat-value" id="moves">0</span></div>
+            <div class="stat">Errors: <span class="stat-value" id="errors">0</span>/3</div>
         </div>
         
         <div class="message" id="message">Click Start to begin!</div>
@@ -190,7 +217,7 @@
         </div>
         
         <div class="high-score">
-            High Score: <span id="highScore" class="high-score-value">0</span>
+            High Score: <span id="highScore" class="high-score-value">Login to save scores</span>
         </div>
     </div>
 
@@ -205,6 +232,7 @@
         const pairsDisplay = document.getElementById('pairs');
         const totalPairsDisplay = document.getElementById('totalPairs');
         const movesDisplay = document.getElementById('moves');
+        const errorsDisplay = document.getElementById('errors');
         const messageDisplay = document.getElementById('message');
         const highScoreDisplay = document.getElementById('highScore');
         
@@ -213,23 +241,59 @@
         let totalPairs = 2;
         let matchedPairs = 0;
         let moves = 0;
+        let errors = 0;
         let cards = [];
         let canClick = false;
-        let highScore = localStorage.getItem('memoryHighScore') || 0;
+        let highScore = 0;
         let activeEmojis = [];
+        let isGameActive = false;
         
-        // Initialize high score display
-        highScoreDisplay.textContent = highScore;
+        // Initialize game
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadHighScore();
+            initGame();
+        });
+
+        async function loadHighScore() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                highScoreDisplay.textContent = 'Login to save scores';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3004/api/highscores', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    highScore = data.memmatch || 0;
+                    highScoreDisplay.textContent = highScore;
+                } else {
+                    console.error('Failed to fetch high scores:', response.status);
+                    highScoreDisplay.textContent = 'Error loading score';
+                }
+            } catch (error) {
+                console.error('Error fetching high scores:', error);
+                highScoreDisplay.textContent = 'Error loading score';
+            }
+        }
         
         function initGame() {
+            isGameActive = false;
             gameGrid.innerHTML = '';
             cards = [];
             matchedPairs = 0;
             moves = 0;
+            // Don't reset errors here - they persist across levels
             pairsDisplay.textContent = '0';
             movesDisplay.textContent = '0';
+            errorsDisplay.textContent = errors;
             totalPairsDisplay.textContent = totalPairs;
-            messageDisplay.textContent = `Level ${level}: Find ${totalPairs} matching pairs`;
+            messageDisplay.textContent = `Level ${level}: Find ${totalPairs} matching pairs (Errors: ${errors}/3)`;
             
             // Create empty grid (6x6 = 36 cards)
             for (let i = 0; i < 36; i++) {
@@ -255,6 +319,9 @@
         }
         
         function startLevel() {
+            if (isGameActive) return;
+            isGameActive = true;
+            
             // Clear any existing emojis
             cards.forEach(card => {
                 const front = card.querySelector('.card-front');
@@ -299,13 +366,13 @@
                         card.classList.add('hidden');
                     }
                 });
-                messageDisplay.textContent = "Now find the matching pairs!";
+                messageDisplay.textContent = `Now find the matching pairs! (Errors: ${errors}/3)`;
                 canClick = true;
             }, 3000);
         }
         
         function flipCard(card) {
-            if (!canClick || card.classList.contains('matched') || !card.dataset.emoji) return;
+            if (!canClick || !isGameActive || card.classList.contains('matched') || !card.dataset.emoji) return;
             
             card.classList.remove('hidden');
             moves++;
@@ -326,6 +393,7 @@
                     flippedCards.forEach(c => c.classList.add('matched'));
                     matchedPairs++;
                     pairsDisplay.textContent = matchedPairs;
+                    showFeedback('✓', flippedCards[0], true);
                     
                     if (matchedPairs === totalPairs) {
                         // Level complete
@@ -334,6 +402,7 @@
                             level++;
                             totalPairs = Math.min(level + 1, emojis.length);
                             levelDisplay.textContent = level;
+                            isGameActive = false;
                             initGame();
                             updateHighScore();
                         }, 1500);
@@ -341,34 +410,100 @@
                         canClick = true;
                     }
                 } else {
-                    // No match
+                    // No match - increment error count
+                    errors++;
+                    errorsDisplay.textContent = errors;
+                    showFeedback('✗', flippedCards[0], false);
+                    
+                    // Check if game over (3 errors)
+                    if (errors >= 3) {
+                        messageDisplay.textContent = "Game Over! Too many wrong matches.";
+                        setTimeout(() => {
+                            resetGame();
+                        }, 1500);
+                        return;
+                    }
+                    
                     setTimeout(() => {
                         flippedCards.forEach(c => c.classList.add('hidden'));
                         canClick = true;
+                        messageDisplay.textContent = `Find matching pairs! (Errors: ${errors}/3)`;
                     }, 1000);
                 }
             }
         }
+
+        function showFeedback(symbol, card, isPositive) {
+            const feedback = document.createElement('div');
+            feedback.className = `match-feedback ${isPositive ? 'positive-feedback' : 'negative-feedback'}`;
+            feedback.textContent = symbol;
+            feedback.style.left = `${card.offsetLeft + card.offsetWidth/2 - 15}px`;
+            feedback.style.top = `${card.offsetTop + card.offsetHeight/2 - 15}px`;
+            gameGrid.appendChild(feedback);
+            
+            setTimeout(() => {
+                feedback.style.opacity = '1';
+                feedback.style.transform = 'translateY(-20px)';
+            }, 10);
+            
+            setTimeout(() => {
+                feedback.style.opacity = '0';
+                feedback.style.transform = 'translateY(-40px)';
+                setTimeout(() => gameGrid.removeChild(feedback), 500);
+            }, 500);
+        }
         
-        function updateHighScore() {
-            if (level - 1 > highScore) {
-                highScore = level - 1;
-                localStorage.setItem('memoryHighScore', highScore);
-                highScoreDisplay.textContent = highScore;
+        async function updateHighScore() {
+            const newHighScore = level - 1;
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            if (newHighScore > highScore) {
+                highScore = newHighScore;
+                updateHighScoreDisplay();
+                
+                try {
+                    const response = await fetch('http://localhost:3004/api/update-highscore', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            game: 'memmatch',
+                            score: highScore
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Failed to save high score:', errorText);
+                    }
+                } catch (error) {
+                    console.error('Error saving high score:', error);
+                }
             }
+        }
+
+        function updateHighScoreDisplay() {
+            highScoreDisplay.textContent = highScore;
+            highScoreDisplay.style.animation = "none";
+            void highScoreDisplay.offsetWidth; // Trigger reflow
+            highScoreDisplay.style.animation = "highlight 1s";
         }
         
         function resetGame() {
-            level = 1;
-            totalPairs = 2;
-            initGame();
+            const confirmReset = confirm("Are you sure you want to reset the game?");
+            if (confirmReset) {
+                level = 1;
+                totalPairs = 2;
+                errors = 0; // Reset errors only when game is manually reset
+                initGame();
+            }
         }
         
         startBtn.addEventListener('click', startLevel);
         resetBtn.addEventListener('click', resetGame);
-        
-        // Initialize game
-        initGame();
     </script>
 </body>
 </html>

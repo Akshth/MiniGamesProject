@@ -15,6 +15,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            background-image: radial-gradient(circle at 10% 20%, #2b2b2b 0%, #1a1a1a 90%);
         }
 
         .container {
@@ -25,6 +26,7 @@
             box-shadow: 0px 8px 16px rgba(255, 223, 0, 0.2);
             max-width: 900px;
             width: 100%;
+            border: 1px solid #333;
         }
 
         .auth-buttons {
@@ -71,10 +73,8 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-        }
-
-        .title span {
             color: #ffd700;
+            text-shadow: 0 2px 4px rgba(255, 204, 0, 0.3);
         }
 
         .section-title {
@@ -153,6 +153,12 @@
             background-color: #2196F3;
         }
 
+        .welcome-message {
+            margin-bottom: 20px;
+            color: #ccc;
+            font-size: 1.1rem;
+        }
+
         @media (max-width: 600px) {
             .games-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -161,14 +167,16 @@
             .container {
                 padding: 20px;
             }
+            
+            .title {
+                font-size: 28px;
+            }
         }
     </style>
 </head>
 <body>
-
     <div class="container">
         <div class="auth-buttons" id="authButtons">
-            <!-- Only one set of auth buttons here -->
             <a href="login.html" class="auth-button login-button" id="loginButton">Login</a>
             <a href="signup.html" class="auth-button signup-button" id="signupButton">Sign Up</a>
             <a href="#" class="auth-button login-button" id="logoutButton" style="display: none;">Logout</a>
@@ -176,6 +184,7 @@
         </div>
 
         <div class="title">Mini Games🎮</div>
+        <div id="welcomeMessage" class="welcome-message">Test your memory and reaction skills!</div>
 
         <div class="games-grid">
             <a href="haveyouseen.html" class="game-box single-player">
@@ -218,6 +227,7 @@
             const signupButton = document.getElementById('signupButton');
             const logoutButton = document.getElementById('logoutButton');
             const dashboardButton = document.getElementById('dashboardButton');
+            const welcomeMessage = document.getElementById('welcomeMessage');
 
             // Check authentication status on page load
             updateAuthButtons(token);
@@ -235,16 +245,19 @@
             function updateAuthButtons(token) {
                 if (token) {
                     // User is logged in
+                    const userData = JSON.parse(atob(token.split('.')[1]));
                     if (loginButton) loginButton.style.display = 'none';
                     if (signupButton) signupButton.style.display = 'none';
                     if (logoutButton) logoutButton.style.display = 'inline-block';
                     if (dashboardButton) dashboardButton.style.display = 'inline-block';
+                    welcomeMessage.textContent = `Welcome back, ${userData.username}!`;
                 } else {
                     // User is not logged in
                     if (loginButton) loginButton.style.display = 'inline-block';
                     if (signupButton) signupButton.style.display = 'inline-block';
                     if (logoutButton) logoutButton.style.display = 'none';
                     if (dashboardButton) dashboardButton.style.display = 'none';
+                    welcomeMessage.textContent = "Test your memory and reaction skills!";
                 }
             }
         });

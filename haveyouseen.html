@@ -73,6 +73,7 @@
             letter-spacing: 2px;
             color: #fff;
             text-shadow: 0 2px 5px rgba(255, 255, 255, 0.2);
+            transition: color 0.3s;
         }
         
         .buttons {
@@ -122,6 +123,20 @@
             font-size: 1.5rem;
         }
         
+        .score-feedback {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            min-height: 24px;
+        }
+        
+        .correct {
+            color: #4CAF50;
+        }
+        
+        .incorrect {
+            color: #F44336;
+        }
+        
         @media (max-width: 600px) {
             h1 {
                 font-size: 2rem;
@@ -161,6 +176,7 @@
         </div>
         
         <div id="wordDisplay">Loading...</div>
+        <div id="feedback" class="score-feedback"></div>
         
         <div class="buttons">
             <button class="btn" onclick="checkWord(true)">SEEN</button>
@@ -168,16 +184,17 @@
         </div>
         
         <div class="high-score">
-            High Score: <span id="highScore" class="high-score-value">0</span>
+            High Score: <span id="highScore" class="high-score-value">Login to save scores</span>
         </div>
     </div>
 
     <script>
         let lives = 3;
         let score = 0;
-        let highScore = localStorage.getItem('highScore') || 0;
+        let highScore = 0;
         let wordsSeen = new Set();
         let currentWord = "";
+        let isGameActive = true;
 
         const words = [
             "apple", "banana", "cherry", "echo", "falcon", "guitar", "horizon",
@@ -190,56 +207,67 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             // Load high score from server if logged in
-            const token = localStorage.getItem('token');
-            if (token) {
-                try {
-                    const response = await fetch('http://localhost:3004/api/highscores', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        highScore = data.haveyouseen || highScore;
-                        document.getElementById('highScore').textContent = highScore;
-                    } else {
-                        console.error('Failed to fetch high scores:', response.status);
-                    }
-                } catch (error) {
-                    console.error('Error fetching high scores:', error);
-                }
-            } else {
-                document.getElementById('highScore').textContent = highScore;
-            }
-            
+            await loadHighScore();
             newRound();
         });
+
+        async function loadHighScore() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('highScore').textContent = 'Login to save scores';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3004/api/highscores', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    highScore = data.haveyouseen || 0;
+                    document.getElementById('highScore').textContent = highScore;
+                } else {
+                    console.error('Failed to fetch high scores:', response.status);
+                    document.getElementById('highScore').textContent = 'Error loading score';
+                }
+            } catch (error) {
+                console.error('Error fetching high scores:', error);
+                document.getElementById('highScore').textContent = 'Error loading score';
+            }
+        }
 
         function getRandomWord() {
             return words[Math.floor(Math.random() * words.length)];
         }
 
         function newRound() {
+            if (!isGameActive) return;
             currentWord = getRandomWord();
             document.getElementById("wordDisplay").textContent = currentWord;
+            document.getElementById("wordDisplay").style.color = "#fff"; // Reset to white
+            document.getElementById("feedback").textContent = "";
         }
 
         async function checkWord(seenBefore) {
+            if (!isGameActive) return;
+            
             const hasSeen = wordsSeen.has(currentWord);
+            const feedbackEl = document.getElementById("feedback");
+            const wordDisplay = document.getElementById("wordDisplay");
 
             if (seenBefore === hasSeen) {
                 score++;
-                document.getElementById("wordDisplay").style.color = "#4CAF50";
-                setTimeout(() => {
-                    document.getElementById("wordDisplay").style.color = "white";
-                }, 300);
+                wordDisplay.style.color = "#4CAF50"; // Green for correct
+                feedbackEl.textContent = "Correct! +1 point";
+                feedbackEl.className = "score-feedback correct";
             } else {
                 lives--;
-                document.getElementById("wordDisplay").style.color = "#F44336";
-                setTimeout(() => {
-                    document.getElementById("wordDisplay").style.color = "white";
-                }, 300);
+                wordDisplay.style.color = "#F44336"; // Red for incorrect
+                feedbackEl.textContent = `Wrong! ${hasSeen ? "You've seen this before" : "This is a new word"}`;
+                feedbackEl.className = "score-feedback incorrect";
             }
 
             wordsSeen.add(currentWord);
@@ -247,57 +275,72 @@
             document.getElementById("score").textContent = score;
 
             if (lives > 0) {
-                setTimeout(newRound, 500);
+                setTimeout(() => {
+                    newRound();
+                }, 1000);
             } else {
+                isGameActive = false;
                 await updateHighScore();
                 setTimeout(() => {
-                    alert(`Game Over!\nFinal Score: ${score}\nHigh Score: ${highScore}`);
-                    resetGame();
-                }, 300);
+                    showGameOver();
+                }, 1000);
+            }
+        }
+
+        function showGameOver() {
+            const playAgain = confirm(`Game Over!\nFinal Score: ${score}\nHigh Score: ${highScore}\n\nPlay again?`);
+            if (playAgain) {
+                resetGame();
             }
         }
 
         async function updateHighScore() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
             if (score > highScore) {
                 highScore = score;
-                localStorage.setItem('highScore', highScore);
-                document.getElementById('highScore').textContent = highScore;
-                document.getElementById('highScore').style.animation = "highlight 1s";
+                updateHighScoreDisplay();
                 
-                const token = localStorage.getItem('token');
-                if (token) {
-                    try {
-                        const response = await fetch('http://localhost:3004/api/update-highscore', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({
-                                game: 'haveyouseen',
-                                score: highScore
-                            })
-                        });
+                try {
+                    const response = await fetch('http://localhost:3004/api/update-highscore', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            game: 'haveyouseen',
+                            score: highScore
+                        })
+                    });
 
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            console.error('Failed to save high score:', errorText);
-                            alert('Failed to save high score to server. Please try again.');
-                        }
-                    } catch (error) {
-                        console.error('Error saving high score:', error);
-                        alert('Error saving high score to server. Please check your connection.');
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Failed to save high score:', errorText);
                     }
+                } catch (error) {
+                    console.error('Error saving high score:', error);
                 }
             }
+        }
+
+        function updateHighScoreDisplay() {
+            const highScoreEl = document.getElementById('highScore');
+            highScoreEl.textContent = highScore;
+            highScoreEl.style.animation = "none";
+            void highScoreEl.offsetWidth; // Trigger reflow
+            highScoreEl.style.animation = "highlight 1s";
         }
 
         function resetGame() {
             lives = 3;
             score = 0;
             wordsSeen.clear();
+            isGameActive = true;
             document.getElementById("lives").textContent = lives;
             document.getElementById("score").textContent = score;
+            document.getElementById("feedback").textContent = "";
             newRound();
         }
 
