@@ -10,7 +10,7 @@ const app = express();
 
 // Enhanced CORS configuration
 app.use(cors({
-  origin: 'http://localhost:3004',
+  origin: 'https://free-mini-games.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

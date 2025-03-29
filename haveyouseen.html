@@ -219,7 +219,7 @@
             }
 
             try {
-                const response = await fetch('http://localhost:3004/api/highscores', {
+                const response = await fetch('https://free-mini-games.vercel.app/api/highscores', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -303,7 +303,7 @@
                 updateHighScoreDisplay();
                 
                 try {
-                    const response = await fetch('http://localhost:3004/api/update-highscore', {
+                    const response = await fetch('https://free-mini-games.vercel.app/api/update-highscore', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
