@@ -20,13 +20,14 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname));
 
 // MongoDB connection with error handling
-mongoose.connect('mongodb://localhost:27017/gamehub', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  retryWrites: true
-})
-.then(() => console.log('✅ MongoDB connected successfully'))
-.catch(err => console.error('❌ MongoDB connection error:', err));
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gamehub')
+  .then(() => console.log('✅ MongoDB connected successfully'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
+
+//ADDING CONNECTION HANDLING
+mongoose.connection.on('error', err => {
+  console.error('MongoDB connection lost:', err);
+});
 
 // User Schema with strict validation
 const userSchema = new mongoose.Schema({
@@ -260,4 +261,3 @@ process.on('SIGINT', async () => {
   }
 });
 
-6
