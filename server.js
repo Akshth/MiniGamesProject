@@ -19,14 +19,37 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.static(__dirname));
 
-// MongoDB connection with error handling
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gamehub')
-  .then(() => console.log('✅ MongoDB connected successfully'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+// MongoDB connection with enhanced error handling
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+      ssl: true,
+      tlsAllowInvalidCertificates: false
+    });
+    console.log('✅ MongoDB connected successfully');
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err);
+    process.exit(1); // Exit process with failure
+  }
+};
 
-//ADDING CONNECTION HANDLING
-mongoose.connection.on('error', err => {
-  console.error('MongoDB connection lost:', err);
+// Initialize DB connection
+connectDB();
+
+// Connection event handlers
+mongoose.connection.on('connected', () => {
+  console.log('Mongoose connected to DB');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('Mongoose connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('Mongoose disconnected');
+  // Optional: Implement reconnection logic here
 });
 
 // User Schema with strict validation
@@ -48,12 +71,12 @@ const userSchema = new mongoose.Schema({
     haveyouseen: { type: Number, default: 0 },
     memmatch: { type: Number, default: 0 },
     numbermem: { type: Number, default: 0 },
-    reaction: { type: Number, default: Infinity }, // Lower is better
+    reaction: { type: Number, default: Infinity },
     sequence: { type: Number, default: 0 },
     tictactoe: { type: Number, default: 0 }
   },
   lastUpdated: { type: Date, default: Date.now }
-}, { strict: true }); // Strict mode prevents undefined fields
+}, { strict: true });
 
 const User = mongoose.model('User', userSchema);
 
